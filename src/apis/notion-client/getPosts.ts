@@ -6,6 +6,15 @@ import getAllPageIds from "src/libs/utils/notion/getAllPageIds"
 import getPageProperties from "src/libs/utils/notion/getPageProperties"
 import { TPosts } from "src/types"
 
+const notionRequestOptions = {
+  gotOptions: {
+    headers: {
+      "user-agent":
+        "Mozilla/5.0 (compatible; DeveloperBlog/1.0; +https://github.com/hyeongmin90/developer-blog)",
+    },
+  },
+}
+
 /**
  * @param {{ includePages: boolean }} - false: posts only / true: include pages
  */
@@ -15,7 +24,7 @@ export const getPosts = async () => {
   let id = CONFIG.notionConfig.pageId as string
   const api = new NotionAPI()
 
-  const response = await api.getPage(id)
+  const response = await api.getPage(id, notionRequestOptions)
   id = idToUuid(id)
   const collectionValue = Object.values(response.collection)[0]?.value as any
   const collection = collectionValue?.value ?? collectionValue
