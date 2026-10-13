@@ -20,14 +20,16 @@ const PostHeader: React.FC<Props> = ({ data }) => {
             {data.author && data.author[0] && data.author[0].name && (
               <>
                 <div className="author">
-                  <Image
-                    css={{ borderRadius: "50%" }}
-                    src={CONFIG.profile.image}
-                    unoptimized
-                    alt="profile_photo"
-                    width={24}
-                    height={24}
-                  />
+                  {CONFIG.profile.image && (
+                    <Image
+                      css={{ borderRadius: "50%" }}
+                      src={CONFIG.profile.image}
+                      unoptimized
+                      alt="profile_photo"
+                      width={24}
+                      height={24}
+                    />
+                  )}
                   <div className="">{data.author[0].name}</div>
                 </div>
                 <div className="hr"></div>
