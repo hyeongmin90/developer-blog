@@ -12,8 +12,8 @@ const CONFIG = {
   },
   projects: [
     {
-      name: "Terminal4GPTWeb",
-      href: "https://github.com/hyeongmin90/terminal4gptweb",
+      name: "Vantage",
+      href: "https://hyeongmin.dev",
     },
   ],
   // blog setting (required)
