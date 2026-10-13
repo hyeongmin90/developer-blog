@@ -2,7 +2,7 @@ const CONFIG = {
   // profile setting (required)
   profile: {
     name: "hyeongmin90",
-    image: "/avatar.svg", // If you want to create your own notion avatar, check out https://notion-avatar.vercel.app
+    image: "", // 프로필 이미지 미사용
     role: "Backend & AI Engineer",
     bio: "백엔드 시스템과 RAG 기반 AI 에이전트를 개발하며, 설계와 구현 경험을 기록합니다.",
     email: "",
