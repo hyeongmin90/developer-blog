@@ -1,71 +1,132 @@
-import { CONFIG } from "site.config"
-import { NotionAPI } from "notion-client"
-import { idToUuid } from "notion-utils"
+import { TPost, TPosts, TPostStatus, TPostType } from "src/types"
 
-import getAllPageIds from "src/libs/utils/notion/getAllPageIds"
-import getPageProperties from "src/libs/utils/notion/getPageProperties"
-import { TPosts } from "src/types"
+// Notion's legacy private collection_query response is no longer reliable.
+// Query the published blog database through the supported 2025-09-03 data-source API.
+// Keep the unofficial client only for rendering individual article record maps.
+const NOTION_API_VERSION = "2025-09-03"
 
-const notionRequestOptions = {
-  gotOptions: {
-    headers: {
-      "user-agent":
-        "Mozilla/5.0 (compatible; DeveloperBlog/1.0; +https://github.com/hyeongmin90/developer-blog)",
-    },
-  },
+type NotionRichText = { plain_text?: string }
+type NotionProperty = {
+  type?: string
+  title?: NotionRichText[]
+  rich_text?: NotionRichText[]
+  select?: { name: string } | null
+  multi_select?: { name: string }[]
+  date?: { start: string } | null
+  people?: { id: string; name?: string; avatar_url?: string | null }[]
+  files?: {
+    file?: { url: string }
+    external?: { url: string }
+  }[]
 }
 
-/**
- * @param {{ includePages: boolean }} - false: posts only / true: include pages
- */
+type NotionPage = {
+  object: string
+  id: string
+  created_time: string
+  properties: Record<string, NotionProperty>
+}
 
-// TODO: react query를 사용해서 처음 불러온 뒤로는 해당데이터만 사용하도록 수정
-export const getPosts = async () => {
-  let id = CONFIG.notionConfig.pageId as string
-  const api = new NotionAPI()
+type NotionQueryResponse = {
+  results: NotionPage[]
+  has_more: boolean
+  next_cursor: string | null
+}
 
-  const response = await api.getPage(id, notionRequestOptions)
-  id = idToUuid(id)
-  const collectionValue = Object.values(response.collection)[0]?.value as any
-  const collection = collectionValue?.value ?? collectionValue
-  const block = response.block
-  const schema = collection?.schema
+const plainText = (property?: NotionProperty): string =>
+  (property?.title ?? property?.rich_text ?? [])
+    .map((part) => part.plain_text ?? "")
+    .join("")
 
-  const blockValue = (block[id].value as any)?.value ?? block[id].value
-  const rawMetadata = blockValue
-
-  // Check Type
-  if (
-    rawMetadata?.type !== "collection_view_page" &&
-    rawMetadata?.type !== "collection_view"
-  ) {
-    return []
-  } else {
-    // Construct Data
-    const pageIds = getAllPageIds(response)
-    const data = []
-    for (let i = 0; i < pageIds.length; i++) {
-      const id = pageIds[i]
-      const properties = (await getPageProperties(id, block, schema)) || null
-      // Add fullwidth, createdtime to properties
-      const pageBlockValue = (block[id].value as any)?.value ?? block[id].value
-      properties.createdTime = new Date(
-        pageBlockValue?.created_time
-      ).toString()
-      properties.fullWidth =
-        (pageBlockValue?.format as any)?.page_full_width ?? false
-
-      data.push(properties)
+async function queryNotion<T>(
+  dataSourceId: string,
+  token: string,
+  cursor?: string
+): Promise<T> {
+  const response = await fetch(
+    `https://api.notion.com/v1/data_sources/${encodeURIComponent(dataSourceId)}/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Notion-Version": NOTION_API_VERSION,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      }),
     }
+  )
 
-    // Sort by date
-    data.sort((a: any, b: any) => {
-      const dateA: any = new Date(a?.date?.start_date || a.createdTime)
-      const dateB: any = new Date(b?.date?.start_date || b.createdTime)
-      return dateB - dateA
-    })
-
-    const posts = data as TPosts
-    return posts
+  if (!response.ok) {
+    // Avoid logging secrets; the status is sufficient to diagnose missing access.
+    throw new Error(
+      `Notion data-source query failed (HTTP ${response.status}). Check NOTION_API_TOKEN, NOTION_DATA_SOURCE_ID, and the blog database's integration permissions.`
+    )
   }
+
+  return (await response.json()) as T
+}
+
+function toPost(page: NotionPage): TPost {
+  const p = page.properties
+  const status = p.status?.select?.name as TPostStatus | undefined
+  const type = p.type?.select?.name as TPostType | undefined
+  const image = p.thumbnail?.files?.[0]
+  const authors = p.author?.people ?? []
+
+  return {
+    id: page.id,
+    title: plainText(p.title),
+    slug: plainText(p.slug),
+    summary: plainText(p.summary),
+    status: [status ?? "Private"],
+    type: [type ?? "Post"],
+    category: p.category?.select?.name ? [p.category.select.name] : [],
+    tags: (p.tags?.multi_select ?? []).map((tag) => tag.name),
+    date: { start_date: p.date?.date?.start ?? page.created_time },
+    createdTime: page.created_time,
+    fullWidth: false,
+    thumbnail: image?.file?.url ?? image?.external?.url,
+    author: authors.map((person) => ({
+      id: person.id,
+      name: person.name ?? "",
+      profile_photo: person.avatar_url ?? undefined,
+    })),
+  }
+}
+
+export async function getPosts(): Promise<TPosts> {
+  const token = process.env.NOTION_API_TOKEN
+  const dataSourceId = process.env.NOTION_DATA_SOURCE_ID
+
+  if (!token || !dataSourceId) {
+    throw new Error(
+      "Missing NOTION_API_TOKEN or NOTION_DATA_SOURCE_ID. Configure both in Vercel Environment Variables."
+    )
+  }
+
+  const posts: TPosts = []
+  let cursor: string | undefined
+
+  do {
+    const result = await queryNotion<NotionQueryResponse>(
+      dataSourceId,
+      token,
+      cursor
+    )
+    posts.push(
+      ...result.results
+        .filter((page) => page.object === "page")
+        .map(toPost)
+    )
+    cursor = result.has_more ? result.next_cursor ?? undefined : undefined
+  } while (cursor)
+
+  return posts.sort((a, b) => {
+    const aTime = new Date(a.date?.start_date || a.createdTime).getTime()
+    const bTime = new Date(b.date?.start_date || b.createdTime).getTime()
+    return bTime - aTime
+  })
 }
