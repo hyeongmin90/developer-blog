@@ -4,7 +4,7 @@ const CONFIG = {
     name: "hyeongmin90",
     image: "",
     role: "Backend & AI Engineer",
-    bio: "백엔드/에이전트를 개발합니다.",
+    bio: "Java와 Python 기반의 백엔드 개발과 Python을 활용한 AI/LLM 시스템 개발을 하고 있습니다.",
     email: "nsby9000@gmail.com",
     linkedin: "",
     github: "hyeongmin90",
