@@ -16,9 +16,13 @@ function localLink(url: string, pageLinks: Record<string, string>): string {
     if (target.hostname === "morethan-log.vercel.app") {
       return target.pathname + target.search + target.hash
     }
+    if (target.hostname === "local.invalid" && target.pathname.startsWith("/p/")) {
+      const id = target.pathname.match(/[a-f0-9]{32}/i)?.[0]
+      if (id && pageLinks[normalizeId(id)]) return "/" + pageLinks[normalizeId(id)]
+    }
     if (target.hostname === "local.invalid") return url
     if (target.hostname === "notion.so" || target.hostname.endsWith(".notion.so") ||
-        target.hostname.endsWith(".notion.site")) {
+        target.hostname === "app.notion.com" || target.hostname.endsWith(".notion.site")) {
       const matches = target.pathname.match(/[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}/ig)
       const id = matches?.[matches.length - 1]
       if (id && pageLinks[normalizeId(id)]) return "/" + pageLinks[normalizeId(id)]
