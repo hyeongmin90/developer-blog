@@ -74,6 +74,7 @@ function toPost(page: NotionPage): TPost {
   const status = p.status?.select?.name as TPostStatus | undefined
   const type = p.type?.select?.name as TPostType | undefined
   const image = p.thumbnail?.files?.[0]
+  const thumbnail = image?.file?.url ?? image?.external?.url
   const authors = p.author?.people ?? []
 
   return {
@@ -88,11 +89,11 @@ function toPost(page: NotionPage): TPost {
     date: { start_date: p.date?.date?.start ?? page.created_time },
     createdTime: page.created_time,
     fullWidth: false,
-    thumbnail: image?.file?.url ?? image?.external?.url,
+    ...(thumbnail ? { thumbnail } : {}),
     author: authors.map((person) => ({
       id: person.id,
       name: person.name ?? "",
-      profile_photo: person.avatar_url ?? undefined,
+      ...(person.avatar_url ? { profile_photo: person.avatar_url } : {}),
     })),
   }
 }
