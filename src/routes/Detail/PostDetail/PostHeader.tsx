@@ -23,6 +23,7 @@ const PostHeader: React.FC<Props> = ({ data }) => {
                   <Image
                     css={{ borderRadius: "50%" }}
                     src={data.author[0].profile_photo || CONFIG.profile.image}
+                    unoptimized
                     alt="profile_photo"
                     width={24}
                     height={24}
@@ -52,6 +53,7 @@ const PostHeader: React.FC<Props> = ({ data }) => {
             <div className="thumbnail">
               <Image
                 src={data.thumbnail}
+                unoptimized
                 css={{ objectFit: "cover" }}
                 fill
                 alt={data.title}
