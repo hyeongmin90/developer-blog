@@ -2,10 +2,10 @@ const CONFIG = {
   // profile setting (required)
   profile: {
     name: "hyeongmin90",
-    image: "", // 프로필 이미지 미사용
+    image: "",
     role: "Backend & AI Engineer",
-    bio: "백엔드 시스템과 RAG 기반 AI 에이전트를 개발하며, 설계와 구현 경험을 기록합니다.",
-    email: "",
+    bio: "백엔드/에이전트를 개발합니다.",
+    email: "nsby9000@gmail.com",
     linkedin: "",
     github: "hyeongmin90",
     instagram: "",
