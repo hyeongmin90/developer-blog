@@ -4,7 +4,7 @@ import Footer from "./PostFooter"
 import CommentBox from "./CommentBox"
 import Category from "src/components/Category"
 import styled from "@emotion/styled"
-import NotionRenderer from "../components/NotionRenderer"
+import OfficialNotionRenderer from "../components/OfficialNotionRenderer"
 import usePostQuery from "src/hooks/usePostQuery"
 
 type Props = {}
@@ -28,7 +28,7 @@ const PostDetail: React.FC<Props> = () => {
         )}
         {data.type[0] === "Post" && <PostHeader data={data} />}
         <div>
-          <NotionRenderer recordMap={data.recordMap} />
+          <OfficialNotionRenderer blocks={data.blocks} postId={data.id} pageLinks={data.pageLinks} />
         </div>
         {data.type[0] === "Post" && (
           <>

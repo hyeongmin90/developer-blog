@@ -3,12 +3,12 @@ import { filterPosts } from "src/libs/utils/notion"
 import { CONFIG } from "site.config"
 import { NextPageWithLayout } from "../types"
 import CustomError from "src/routes/Error"
-import { getRecordMap, getPosts } from "src/apis"
+import { getPosts } from "src/apis"
+import { getBlocks } from "src/apis/notion-client/getBlocks"
 import MetaConfig from "src/components/MetaConfig"
 import { GetStaticProps } from "next"
-import { queryClient } from "src/libs/react-query"
+import { QueryClient, dehydrate } from "@tanstack/react-query"
 import { queryKey } from "src/constants/queryKey"
-import { dehydrate } from "@tanstack/react-query"
 import usePostQuery from "src/hooks/usePostQuery"
 import { FilterPostsOptions } from "src/libs/utils/notion/filterPosts"
 
@@ -17,56 +17,48 @@ const filter: FilterPostsOptions = {
   acceptType: ["Paper", "Post", "Page"],
 }
 
-export const getStaticPaths = async () => {
-  const posts = await getPosts()
-  const filteredPost = filterPosts(posts, filter)
-
-  return {
-    paths: filteredPost.map((row) => `/${row.slug}`),
-    fallback: true,
-  }
-}
+// Generate post pages on demand; avoid hitting Notion's rate limit during every build.
+export const getStaticPaths = async () => ({
+  paths: [],
+  fallback: "blocking" as const,
+})
 
 export const getStaticProps: GetStaticProps = async (context) => {
   const slug = context.params?.slug
+  if (typeof slug !== "string") return { notFound: true }
 
   const posts = await getPosts()
-  const feedPosts = filterPosts(posts)
-  await queryClient.prefetchQuery(queryKey.posts(), () => feedPosts)
-
   const detailPosts = filterPosts(posts, filter)
-  const postDetail = detailPosts.find((t: any) => t.slug === slug)
-  const recordMap = await getRecordMap(postDetail?.id!)
+  const postDetail = detailPosts.find((post) => post.slug === slug)
+  if (!postDetail) return { notFound: true, revalidate: 300 }
 
-  await queryClient.prefetchQuery(queryKey.post(`${slug}`), () => ({
-    ...postDetail,
-    recordMap,
-  }))
+  const blocks = await getBlocks(postDetail.id)
+  const pageLinks = Object.fromEntries(
+    detailPosts.map((post) => [post.id.replace(/-/g, "").toLowerCase(), post.slug])
+  )
+  const client = new QueryClient()
+  client.setQueryData(queryKey.posts(), filterPosts(posts))
+  client.setQueryData(queryKey.post(slug), { ...postDetail, blocks, pageLinks })
 
   return {
-    props: {
-      dehydratedState: dehydrate(queryClient),
-    },
-    revalidate: CONFIG.revalidateTime,
+    props: { dehydratedState: dehydrate(client) },
+    revalidate: 300,
   }
 }
 
 const DetailPage: NextPageWithLayout = () => {
   const post = usePostQuery()
-
   if (!post) return <CustomError />
 
-  const image =
-    post.thumbnail ??
-    CONFIG.ogImageGenerateURL ??
-    `${CONFIG.ogImageGenerateURL}/${encodeURIComponent(post.title)}.png`
+  const image = post.thumbnail
+    ? (post.thumbnail.startsWith("/") ? CONFIG.link + post.thumbnail : post.thumbnail)
+    : `${CONFIG.ogImageGenerateURL}/${encodeURIComponent(post.title)}.png`
 
   const date = post.date?.start_date || post.createdTime || ""
-
   const meta = {
     title: post.title,
     date: new Date(date).toISOString(),
-    image: image,
+    image,
     description: post.summary || "",
     type: post.type[0],
     url: `${CONFIG.link}/${post.slug}`,
@@ -80,8 +72,5 @@ const DetailPage: NextPageWithLayout = () => {
   )
 }
 
-DetailPage.getLayout = (page) => {
-  return <>{page}</>
-}
-
+DetailPage.getLayout = (page) => <>{page}</>
 export default DetailPage

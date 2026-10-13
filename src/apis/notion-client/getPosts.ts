@@ -89,7 +89,7 @@ function toPost(page: NotionPage): TPost {
     date: { start_date: p.date?.date?.start ?? page.created_time },
     createdTime: page.created_time,
     fullWidth: false,
-    ...(thumbnail ? { thumbnail } : {}),
+    ...(thumbnail ? { thumbnail: "/api/notion-image?postId=" + encodeURIComponent(page.id) } : {}),
     author: authors.map((person) => ({
       id: person.id,
       name: person.name ?? "",
