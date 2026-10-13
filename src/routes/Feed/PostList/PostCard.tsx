@@ -26,6 +26,7 @@ const PostCard: React.FC<Props> = ({ data }) => {
           <div className="thumbnail">
             <Image
               src={data.thumbnail}
+              unoptimized
               fill
               alt={data.title}
               css={{ objectFit: "cover" }}
