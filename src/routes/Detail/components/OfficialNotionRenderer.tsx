@@ -78,7 +78,29 @@ function Blocks({ blocks, postId, pageLinks }: Props) {
 
   return (
     <>
-      {blocks.map((block) => {
+      {blocks.map((block, index) => {
+        // Notion stores each list entry as its own block. Group adjacent siblings
+        // into one HTML list so numbering continues instead of restarting at 1.
+        if (block.type === "numbered_list_item" || block.type === "bulleted_list_item") {
+          if (blocks[index - 1]?.type === block.type) return null
+
+          const items: NotionBlock[] = []
+          for (let i = index; i < blocks.length && blocks[i].type === block.type; i++) {
+            items.push(blocks[i])
+          }
+
+          const listItems = items.map((item) => (
+            <li key={item.id}>
+              {rich(item[item.type]?.rich_text as NotionRichText[] | undefined)}
+              {child(item)}
+            </li>
+          ))
+
+          return block.type === "numbered_list_item"
+            ? <ol key={block.id}>{listItems}</ol>
+            : <ul key={block.id}>{listItems}</ul>
+        }
+
         const data = block[block.type] || {}
         const value = data.rich_text as NotionRichText[] | undefined
         const content = rich(value)
@@ -96,12 +118,6 @@ function Blocks({ blocks, postId, pageLinks }: Props) {
             break
           case "heading_3":
             element = <h3 id={block.id}>{content}</h3>
-            break
-          case "bulleted_list_item":
-            element = <ul><li>{content}{child(block)}</li></ul>
-            break
-          case "numbered_list_item":
-            element = <ol><li>{content}{child(block)}</li></ol>
             break
           case "to_do":
             element = <label className="todo"><input type="checkbox" disabled checked={!!data.checked} /> {content}</label>
