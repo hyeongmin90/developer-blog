@@ -113,7 +113,7 @@ function Blocks({ blocks, postId, pageLinks }: Props) {
             element = <aside className="callout"><span>{data.icon?.emoji || "💡"}</span><div>{content}{child(block)}</div></aside>
             break
           case "code":
-            element = <pre><code data-language={data.language}>{(value || []).map(x => x.plain_text ?? x.text?.content ?? "").join("")}</code></pre>
+            element = <pre className={data.language === "mermaid" ? "language-mermaid" : undefined}><code data-language={data.language}>{(value || []).map(x => x.plain_text ?? x.text?.content ?? "").join("")}</code></pre>
             break
           case "image":
             element = <figure><img src={imageUrl(block.id)} alt={(data.caption || []).map((x: NotionRichText) => x.plain_text).join("") || "Notion image"} loading="lazy" /><figcaption>{rich(data.caption)}</figcaption></figure>
