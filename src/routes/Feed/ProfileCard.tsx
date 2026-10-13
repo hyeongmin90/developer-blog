@@ -1,6 +1,6 @@
 import styled from "@emotion/styled"
-import Image from "next/image"
 import React from "react"
+import Image from "next/image"
 import { CONFIG } from "site.config"
 import { Emoji } from "src/components/Emoji"
 
@@ -13,9 +13,11 @@ const ProfileCard: React.FC<Props> = () => {
         <Emoji>💻</Emoji> Profile
       </div>
       <div className="content">
-        <div className="top">
-          <Image src={CONFIG.profile.image} fill alt="" />
-        </div>
+        {CONFIG.profile.image && (
+          <div className="top">
+            <Image src={CONFIG.profile.image} fill alt="" />
+          </div>
+        )}
         <div className="mid">
           <div className=" name">{CONFIG.profile.name}</div>
           <div className="role">{CONFIG.profile.role}</div>
