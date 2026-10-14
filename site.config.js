@@ -13,7 +13,7 @@ const CONFIG = {
   projects: [
     {
       name: "Vantage",
-      href: "https://hyeongmin.dev",
+      href: "https://hyeongmin.dev/chat",
     },
   ],
   // blog setting (required)
