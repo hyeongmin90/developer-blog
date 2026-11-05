@@ -8,6 +8,7 @@ export type NotionRichText = {
   type?: string
   text?: { content?: string; link?: { url: string } | null }
   mention?: { type?: string; page?: { id: string } }
+  equation?: { expression?: string }
   annotations?: {
     bold?: boolean
     italic?: boolean
