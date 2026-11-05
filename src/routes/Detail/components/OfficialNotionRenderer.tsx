@@ -1,6 +1,21 @@
 import React, { Fragment, ReactNode } from "react"
 import styled from "@emotion/styled"
+import katex from "katex"
+import "katex/dist/katex.min.css"
 import { NotionBlock, NotionRichText } from "src/apis/notion-client/getBlocks"
+
+function Equation({ expression, block }: { expression: string; block?: boolean }) {
+  const html = katex.renderToString(expression, {
+    displayMode: !!block,
+    throwOnError: false,
+    strict: "ignore",
+  })
+  return block ? (
+    <div className="equation-block" dangerouslySetInnerHTML={{ __html: html }} />
+  ) : (
+    <span className="equation-inline" dangerouslySetInnerHTML={{ __html: html }} />
+  )
+}
 
 type Props = {
   blocks: NotionBlock[]
@@ -43,7 +58,10 @@ function Rich({
   return (
     <>
       {(items ?? []).map((item, i) => {
-        let node: ReactNode = item.plain_text ?? item.text?.content ?? ""
+        let node: ReactNode =
+          item.type === "equation" && item.equation?.expression
+            ? <Equation expression={item.equation.expression} />
+            : item.plain_text ?? item.text?.content ?? ""
         const a = item.annotations
         if (a?.code) node = <code>{node}</code>
         if (a?.bold) node = <strong>{node}</strong>
@@ -153,7 +171,7 @@ function Blocks({ blocks, postId, pageLinks }: Props) {
             element = <p><a href={imageUrl(block.id)} target="_blank" rel="noopener noreferrer">영상 열기</a></p>
             break
           case "equation":
-            element = <pre className="equation">{data.expression}</pre>
+            element = <Equation expression={data.expression || ""} block />
             break
           case "table":
             element = <div className="table-scroll"><table><tbody>{child(block)}</tbody></table></div>
@@ -224,5 +242,8 @@ const StyledWrapper = styled.div`
   .columns { display: flex; gap: 1.2rem; }
   .column { flex: 1; min-width: 0; }
   hr { margin: 2rem 0; opacity: 0.3; }
+  .equation-block { overflow-x: auto; overflow-y: hidden; margin: 1rem 0 1.4rem; padding: 0.25rem 0; }
+  .equation-block .katex-display { margin: 0; }
+  .equation-inline .katex { font-size: 1.05em; }
   @media(max-width: 640px) { .columns { display: block; } }
 `;
